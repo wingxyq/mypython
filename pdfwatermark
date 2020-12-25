@@ -1,0 +1,53 @@
+
+import PyPDF2
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+from reportlab.pdfbase import pdfmetrics 
+from reportlab.pdfbase.ttfonts import TTFont 
+from PyPDF2 import PdfFileWriter,PdfFileReader
+from datetime import datetime
+import os
+
+pdfmetrics.registerFont(TTFont('song', 'C:/Windows/Fonts/simsun.ttc'))#宋体
+
+def create_watermark(content):
+    #默认大小为21cm*29.7cm
+    c = canvas.Canvas('Watermark.pdf', pagesize = (30*cm, 30*cm))   
+    #c.translate(0.5*cm, 0.5*cm) #移动坐标原点(坐标系左下为(0,0)))                                                                                                                             
+    c.setFont('song',15)#设置字体为宋体，大小号
+    c.setFillColorRGB(0,0,0)#黑色                                                                                                                         
+    c.drawString(15*cm, 2.5*cm, content)#
+    c.save()#关闭并保存pdf文件
+    
+def add_watermark2pdf(input_pdf,output_pdf,watermark_pdf):
+    watermark = PdfFileReader(watermark_pdf)#读取带有水印的pdf文件
+    watermark_page = watermark.getPage(0)#读取水印pdf的首页
+    pdf = PdfFileReader(input_pdf,strict=False)
+    pdf_writer = PdfFileWriter()
+    for page in range(pdf.getNumPages()):
+        print('正在处理第%s页'%page)
+        pdf_page = pdf.getPage(page)#获取需要添加水印文件的pdf相应页码的内容
+        pdf_page.mergePage(watermark_page)#将水印和添加到pdf中
+        #将两个页面的内容流合并为一个。从两个页面维护资源引用（即字体）。此页面的mediabox / cropbox / etc不会更改。参数页面的内容流将添加到此页面内容流的末尾，这意味着它将在此页面之后或“页面顶部”绘制。
+        pdf_writer.addPage(pdf_page)#将合并之后的pdf添加到新的pdf中
+       
+    pdfOutputFile = open(output_pdf,'wb')   
+    #pdf_writer.encrypt('scb2018')#设置pdf密码
+    pdf_writer.write(pdfOutputFile)
+    pdfOutputFile.close()
+
+def pdfwatermark():
+    path = 'Records'
+    #txt = input('请输入需要添加的水印文字：')
+    txt=datetime.now().strftime("%d/%m/%Y %H:%M")
+    create_watermark(txt)
+    filename = os.listdir(path)
+    i = 0 
+    for file in filename:
+        if file[-4:] == '.pdf':#仅处理文件夹下后缀名为pdf的文档
+            if file != 'Watermark.pdf':
+                i += 1
+                print('********处理第%s个文件中********'%i)
+                add_watermark2pdf(path + '\\'+ file,path + '\\'+ file,'Watermark.pdf')
+
+pdfwatermark()
